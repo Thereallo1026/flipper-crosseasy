@@ -1,0 +1,25 @@
+cargo-features = ["different-binary-name"]
+
+[package]
+name = "crosseasy"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85.0"
+description = "HKeMobility CrossEasy accessible-crossing BLE beacon app"
+license = "MIT"
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+
+[[bin]]
+name = "crosseasy"
+filename = "crosseasy.fap"
+bench = false
+test = false
+
+[dependencies]
+flipperzero = { version = "0.16.0" }
+flipperzero-sys = { version = "0.16.0" }
+flipperzero-rt = { version = "0.16.0" }
+aes = { version = "0.8.4", default-features = false }
