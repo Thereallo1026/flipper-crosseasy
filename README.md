@@ -1,32 +1,34 @@
 # CrossEasy for Flipper Zero
 
 > [!NOTE]
-> This app is intended for people with disabilities to invoke the accessible-crossing feature from a Flipper instead of the phone app. The reverse-engineering findings are for educational and interoperability purposes only. Please do not use it to interfere with traffic infrastructure or trigger crossings you do not need.
+> Learn more in my blog post: [Reverse Engineering Hong Kong's New Traffic Lights](https://thereallo.dev/blog/reverse-engineering-hong-kong-traffic-lights).
 
-Broadcasts BLE advertisement used by Hong Kong's *HKeMobility* app to activate accessible pedestrian-crossing receivers (the audible / eATS signals).
+Sends the same BLE beacon Hong Kong's *HKeMobility* app uses to turn up the audible signal at accessible crossings (eATS), from a Flipper instead of a phone.
 
-Reproduces the beacon emitted by the app's embedded `com.galileo.crosseasylibrary.AdvertiserService`. Built from [`flipperzero-template`](https://github.com/flipperzero-rs/flipperzero-template) against [`flipperzero-rs`](https://github.com/flipperzero-rs/flipperzero-rs).
+It's an accessibility feature. If you're someone it's for, this is just a handier way to invoke it. Don't spam crossings you don't need.
 
-## BLE signal
+## The signal
 
-Non-connectable manufacturer AD, company id 2619 (`0x0A3B`):
+Non connectable manufacturer advertisement, company id 2619 (`0x0A3B`):
 
 ```
 1B FF 3B 0A 47 61 4C 69 4C 65 4F 20 <16-byte AES block>
 ```
 
-`1B` length, `FF` manufacturer data, `3B 0A` company id LE, then the ASCII header `"GaLiLeO "` and a 16-byte `AES-128-ECB` block. The block is encrypted on-device whenever a broadcast starts:
+`1B` length, `FF` manufacturer data, `3B 0A` company id little endian, the ASCII header `"GaLiLeO "`, then a 16 byte `AES-128-ECB` block built on device each broadcast:
 
 ```
 key = "GalileoLH0000852"
 plaintext = "TeCh>Z" + nonce[0..6] + 0x70 + {0x58, 0x79, 0x11}
 ```
 
-Nonce is per session. The app takes the low 48 bits of `System.currentTimeMillis()` in `AdvertiserService.onCreate` and writes it to `register.data` as `Verified;galileo;<ts>` — it's a registration nonce, not a constant. Here it comes from the Flipper RTC (Unix ms) mixed with the tick counter. `crosseasy_packet.py` can rebuild the block for any nonce; nonce `0` encrypts to `1E F8 BC B7 …`.
+The app takes the low 48 bits of `System.currentTimeMillis()` in `AdvertiserService.onCreate`. Here it's the Flipper RTC (Unix ms) plus the tick counter.
 
-Both modes send the same bytes (`f3827d` / `f3828e`). The phone app's `f3820t` field is what actually changes: `0` on, `1` off, `2` trigger. Receivers tell a long hold (amplify) from a short burst (trigger) by how long the advert stays up, so the mode in this app is just a label for that.
+`crosseasy_packet.py` rebuilds the block for any nonce; nonce `0` gives `1E F8 BC B7 …`.
 
-Sent through the firmware extra-beacon slot (`flipperzero::bluetooth::beacon`). Needs OFW with extra-beacon, or Momentum / Xtreme.
+Both modes send the same bytes. Receivers tell a hold (amplify) from a tap (trigger) by how long the advert stays up, so the mode is just how long it broadcasts.
+
+Goes out through the firmware's extra beacon slot (`flipperzero::bluetooth::beacon`). Stock firmware has it, just new enough to include the API, or Momentum / Xtreme.
 
 ## Build and install
 
@@ -34,6 +36,6 @@ Sent through the firmware extra-beacon slot (`flipperzero::bluetooth::beacon`). 
 cargo build --release
 ```
 
-`rustup` installs the pinned toolchain and target automatically.
+The bundle lands at `target/thumbv7em-none-eabihf/release/crosseasy.fap`. Drop it on the Flipper under `apps/Bluetooth/`, or `ufbt launch APPSRC=…/crosseasy.fap`.
 
-The bundle is written to `target/thumbv7em-none-eabihf/release/crosseasy.fap`, copy it to the Flipper under `apps/Bluetooth/` (qFlipper) or launch it with `ufbt launch APPSRC=…/crosseasy.fap`.
+GPL-3.0. Dolphin splash from [flipperzero-firmware](https://github.com/flipperdevices/flipperzero-firmware).
