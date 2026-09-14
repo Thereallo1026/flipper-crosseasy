@@ -22,9 +22,7 @@ key = "GalileoLH0000852"
 plaintext = "TeCh>Z" + nonce[0..6] + 0x70 + {0x58, 0x79, 0x11}
 ```
 
-The app takes the low 48 bits of `System.currentTimeMillis()` in `AdvertiserService.onCreate`. Here it's the Flipper RTC (Unix ms) plus the tick counter.
-
-`crosseasy_packet.py` rebuilds the block for any nonce; nonce `0` gives `1E F8 BC B7 …`.
+The nonce is per session. The app takes the low 48 bits of `System.currentTimeMillis()` in `AdvertiserService.onCreate`; here it's the Flipper RTC (Unix ms) plus the tick counter.
 
 Both modes send the same bytes. Receivers tell a hold (amplify) from a tap (trigger) by how long the advert stays up, so the mode is just how long it broadcasts.
 
